@@ -8,7 +8,7 @@ entity "G4 Service" as g4 #lightGreen
 database "DB" as db
 database "Redis" as redis
 
-user -> g4: **<GetSession>**
+user -> g4: **<GetSession>** [/api/session]
 activate g4
 g4 -> g4: Get installId from context
 g4 -> redis: Get session by installId
@@ -39,7 +39,7 @@ entity "G4 Service" as g4 #lightGreen
 database "DB" as db
 database "Redis" as redis
 
-user -> g4: **<Install>**
+user -> g4: **<Install>** [/api/install]
 activate g4
 g4 -> db: Get **AuthToken** based on **retail_code**
 
@@ -66,7 +66,7 @@ entity "G4 Service" as g4 #lightGreen
 participant "SMS" as sms  << (S,#ADD1B2) www.sms-ope.com >>  order 1
 database "DB" as db
 
-user -> g4: **<EntryMemberPrecheck>**
+user -> g4: **<EntryMemberPrecheck>** 
 activate g4
 g4 -> g4: Validate input
 activate g4 #DarkSalmon
@@ -132,6 +132,47 @@ deactivate g4
 ## Verify mfa PinCode
 
 - User already received mfa PinCode
+
+```plantuml
+actor "User" as user #SaddleBrown
+entity "G4 Service" as g4 #lightGreen
+database "DB" as db
+
+user -> g4: **<VerifyMfaPinCode>**
+g4 -> db: Get info **MfaSession** based on **installId**, \n**MfaToken** and **expire_at**
+activate g4
+g4 -> g4: Check MfaSession have exists
+activate g4 #DarkSalmon
+alt MfaSession not exists
+  g4 -> db: Increase **error_count** in table **MfaToken**
+  g4 --> user: return **pb.ErrorCode_INVALID_PARAMETER**
+end
+
+deactivate g4
+
+g4 -> g4: Check **ErrorCount** > 5
+
+activate g4 #DarkSalmon
+alt ErrorCount greater than or equal to 5
+  g4 --> user: return **pb.ErrorCode_INVALID_PARAMETER**
+end
+deactivate g4
+
+g4 -> db: Save info in **Session**
+note right
+Data
+MemberId
+IsAuthMfa = true
+end note
+
+g4 --> user: Response **Empty{}**
+
+deactivate g4
+```
+
+## Link member card
+
+- Member already `Verify mfa PinCode` success
 
 ```plantuml
 actor "User" as user #SaddleBrown
